@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"html/template" // Import the "html/template" package
+	"html/template"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -21,7 +21,7 @@ type LocationData struct {
 }
 
 type CurrentData struct {
-	TempC float64 `json:"temp_c"`
+	temp float64 `json:"temp_c"`
 }
 
 func getWeatherForecast(apiKey, location string) (*WeatherResponse, error) {
@@ -59,20 +59,36 @@ func GetWeatherHandler(c *gin.Context) {
 		Temperature float64
 	}{
 		City:        weatherData.Location.Name,
-		Temperature: weatherData.Current.TempC,
+		Temperature: weatherData.Current.temp,
 	}
 
-	// Parse the HTML template and render it with the data
+	// parsing data to template
 	err = template.Must(template.ParseFiles("templates/index.html")).Execute(c.Writer, data)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	}
 }
 
+type Route struct {
+	Method  string
+	Path    string
+	Handler func(c *gin.Context)
+}
+
 func main() {
 	r := gin.Default()
 	r.LoadHTMLGlob("templates/*.html")
-	r.GET("/weather/:location", GetWeatherHandler)
+
+	routes := []Route{
+		{
+			Method:  "GET",
+			Path:    "/weather/:location",
+			Handler: GetWeatherHandler,
+		},
+	}
+	for _, route := range routes {
+		r.Handle(route.Method, route.Path, route.Handler)
+	}
 
 	fmt.Println("Server is running on port 8080...")
 	r.Run(":8080")
